@@ -1,0 +1,123 @@
+groups:
+  - name: homelab-alerts
+    rules:
+      # System resource alerts
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% on {{ $labels.instance }} for more than 5 minutes."
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85% on {{ $labels.instance }} for more than 5 minutes."
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space is running low"
+          description: "Disk space is below 15% on {{ $labels.instance }} filesystem {{ $labels.mountpoint }}."
+
+      - alert: HighTemperature
+        expr: node_hwmon_temp_celsius > 75
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High temperature detected"
+          description: "Temperature is above 75°C on {{ $labels.instance }}."
+
+      # Service availability alerts
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service is down"
+          description: "{{ $labels.job }} on {{ $labels.instance }} has been down for more than 2 minutes."
+
+      - alert: HomeAssistantDown
+        expr: up{job="home-assistant"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Home Assistant is down"
+          description: "Home Assistant is not responding for more than 1 minute."
+
+      - alert: WebsiteDown
+        expr: probe_success{job="blackbox-websites"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Website is down"
+          description: "Website {{ $labels.instance }} is not accessible."
+
+      - alert: SSLCertificateExpiringSoon
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "SSL certificate for {{ $labels.instance }} expires in less than 30 days."
+
+      - alert: SSLCertificateExpired
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SSL certificate expired"
+          description: "SSL certificate for {{ $labels.instance }} has expired."
+
+      # Container alerts
+      - alert: ContainerDown
+        expr: absent(container_last_seen{name!=""})
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container is down"
+          description: "Container {{ $labels.name }} is not running."
+
+      - alert: ContainerHighCPU
+        expr: rate(container_cpu_usage_seconds_total{name!=""}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container high CPU usage"
+          description: "Container {{ $labels.name }} CPU usage is above 80%."
+
+      - alert: ContainerHighMemory
+        expr: container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""} * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container high memory usage"
+          description: "Container {{ $labels.name }} memory usage is above 90%."
+
+      # Network alerts
+      - alert: HighNetworkTraffic
+        expr: rate(node_network_receive_bytes_total[5m]) * 8 > 100000000  # 100 Mbps
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network traffic"
+          description: "High network traffic detected on {{ $labels.instance }} interface {{ $labels.device }}."

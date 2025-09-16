@@ -1,0 +1,104 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Load alert rules
+rule_files:
+  - "alerts.yml"
+
+# Configure AlertManager
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter (system metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 5s
+
+  # cAdvisor (container metrics)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 5s
+
+  # Home Assistant monitoring
+  - job_name: 'home-assistant'
+    static_configs:
+      - targets: ['192.168.2.16:8123']  # Update with your Home Assistant IP
+    metrics_path: '/api/prometheus'
+    scheme: https
+    tls_config:
+      insecure_skip_verify: true
+    bearer_token: 'YOUR_HOME_ASSISTANT_LONG_LIVED_ACCESS_TOKEN'  # Replace with your actual token
+    scrape_interval: 30s
+
+  # Homebridge device monitoring (if node exporter installed)
+  - job_name: 'homebridge-node-exporter'
+    static_configs:
+      - targets: ['192.168.1.43:8581']  # Update with your Homebridge device IP
+    scrape_interval: 15s
+
+  # Nginx Proxy Manager (if metrics enabled)
+  - job_name: 'nginx-proxy-manager'
+    static_configs:
+      - targets: ['192.168.2.16:81']  # Update with your NPM IP (nginx-prometheus-exporter)
+    scrape_interval: 30s
+
+  # Vaultwarden monitoring (basic HTTP checks)
+  - job_name: 'vaultwarden-http'
+    static_configs:
+      - targets: ['192.168.2.16:7277']  # Update with your Vaultwarden URL
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # External website monitoring via Blackbox Exporter
+  - job_name: 'blackbox-websites'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - https://hnbhetaria.com  # Your portfolio website
+        - https://meal.hnbhetaria.com  # Your meal planning website
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # SSL certificate monitoring
+  - job_name: 'blackbox-ssl'
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+        - hnbhetaria.com:443
+        - meal.hnbhetaria.com:443
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115

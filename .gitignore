@@ -1,0 +1,43 @@
+# Docker volumes and data
+prometheus_data/
+grafana_data/
+alertmanager_data/
+
+# Environment files with secrets
+.env
+.env.local
+.env.production
+
+# Sensitive configuration files with real tokens/IPs
+prometheus/prometheus-local.yml
+alertmanager/alertmanager-local.yml
+
+# Log files
+*.log
+
+# Backup files
+*.backup
+backups/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
+
+# Personal configuration overrides
+*-local.yml
+*-personal.yml

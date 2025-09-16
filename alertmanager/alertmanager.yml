@@ -1,0 +1,68 @@
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alerts@yourdomain.com'
+
+# Routing configuration
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'default-webhook'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-webhook'
+    - match:
+        severity: warning
+      receiver: 'warning-webhook'
+
+# Notification receivers
+receivers:
+  # Default webhook for all alerts
+  - name: 'default-webhook'
+    webhook_configs:
+      - url: 'https://httpbin.org/post'  # Test webhook endpoint
+        send_resolved: true
+
+  # Critical alerts
+  - name: 'critical-webhook'
+    webhook_configs:
+      - url: 'https://httpbin.org/post'  # Replace with your webhook URL
+        send_resolved: true
+    # Uncomment and configure for email notifications
+    # email_configs:
+    #   - to: 'admin@yourdomain.com'
+    #     subject: 'CRITICAL: {{ .GroupLabels.alertname }}'
+    #     body: |
+    #       Alert: {{ .GroupLabels.alertname }}
+    #       Severity: {{ .CommonLabels.severity }}
+    #       Instance: {{ .CommonLabels.instance }}
+    #       Description: {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+
+  # Warning alerts
+  - name: 'warning-webhook'
+    webhook_configs:
+      - url: 'https://httpbin.org/post'  # Replace with your webhook URL
+        send_resolved: true
+
+  # Slack configuration (alternative to Discord)
+  # - name: 'slack-alerts'
+  #   slack_configs:
+  #     - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+  #       channel: '#homelab-alerts'
+  #       username: 'AlertManager'
+  #       title: 'Homelab Alert'
+  #       text: |
+  #         Alert: {{ .GroupLabels.alertname }}
+  #         Severity: {{ .CommonLabels.severity }}
+  #         Instance: {{ .CommonLabels.instance }}
+  #         Description: {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+
+# Inhibition rules - suppress certain alerts when others are firing
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
